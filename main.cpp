@@ -101,7 +101,7 @@ struct PageParser {
 
     void line_semantic(std::vector<char> sv){
         std::string s(sv.begin(), sv.end());
-        page += formatting ? "    <p>" + s + "</p>" : s;
+        page += formatting ? "    <p>" + s + "</p>" : s + "<br>";
     }
 
     void formatting_semantic(){
@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
     PageParser par;
     par.ParsePagesFromDisk(bfile);
     WebServer w;
-    w.setServerPort(5000);
+    w.setServerPort(8080);
     DynamicRepository r;
     for(BlogPage &page : par.pages) {
         r.add(page.get_fname(), &page);
