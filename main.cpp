@@ -21,7 +21,7 @@ public:
         returnedpage += "<html>\n";
         returnedpage += "  <head>\n";
         returnedpage += "    <title>" + title + "</title>\n";
-        returnedpage += "    <h1>" + title + "</h1>";
+        returnedpage += "    <h1>" + title + "</h1>\n";
         returnedpage += "  </head>\n";
         returnedpage += "  <body>\n";
         returnedpage += page;
@@ -88,13 +88,30 @@ struct PageParser {
             filename = "/" + title + ".html";
             std::replace(filename.begin(), filename.end(), ' ', '_');
         }
+        if(!formatting) {
+            page += "</pre>";
+        }
         pages.push_back(BlogPage(title, page, filename));
+        page = "";
+        title = "";
+        formatting = true;
+        filename = "";
         page_status = false;
     }
 
     void line_semantic(std::vector<char> sv){
         std::string s(sv.begin(), sv.end());
-        page += s + "<br>";
+        page += formatting ? "    <p>" + s + "</p>" : s;
+    }
+
+    void formatting_semantic(){
+        if(formatting) {
+            formatting = false;
+            page += "<pre>";
+        } else {
+            formatting = true;
+            page += "</pre>";
+        }
     }
 
     void ParsePagesFromDisk(std::string filename) {
@@ -106,21 +123,25 @@ struct PageParser {
         using boost::spirit::qi::ascii::space;
         std::fstream f(filename);
         lines.push_back(std::string());
+        int line = 0;
         while(getline(f, lines.back())) {
             bool r = phrase_parse(lines.back().begin(), lines.back().end(),
                                   (
                                       lexeme["+++"][boost::bind(&PageParser::document_semantic, this)]
                     | (lexeme["title: "] >> lexeme[+(char_)][boost::bind(&PageParser::title_semantic, this, boost::placeholders::_1)])
                     | (lexeme["filename: "] >> lexeme[+(char_)][boost::bind(&PageParser::filename_semantic, this, boost::placeholders::_1)])
-                    |  (lexeme[+(char_)][boost::bind(&PageParser::line_semantic, this, boost::placeholders::_1)])
-                    ), boost::spirit::qi::blank);
+                    | (lexeme["---"][boost::bind(&PageParser::formatting_semantic, this)])
+                    |  -(lexeme[+(char_)][boost::bind(&PageParser::line_semantic, this, boost::placeholders::_1)])
+                    ), boost::spirit::qi::eol);
             if(!r) {
-                std::cout << "Parsing failed! Exiting..." << std::endl;
+                std::cout << "Parsing failed at line " << line << "! Exiting..." << std::endl;
             }
+            line++;
         }
     }
     std::vector<BlogPage> pages;
 private:
+    bool formatting = true;
     std::string filename;
     bool page_status = false;
     std::vector<std::string> lines;
@@ -138,11 +159,11 @@ public:
                 "  </head>\n"
                 "  <body>\n";
         for(BlogPage &p : pages) {
-            index += "  <a href=\"" + p.get_fname() + "\">"
-                  + p.get_title() + "</a>";
+            index += "<p>  <a href=\"" + p.get_fname() + "\">"
+                  + p.get_title() + "</a> </p>\n";
         }
-        index += "  </body>";
-        index += "</html>";
+        index += "  </body>\n";
+        index += "</html>\n";
     }
 
     bool getPage(HttpRequest *request, HttpResponse *response) {
@@ -162,7 +183,7 @@ int main(int argc, char *argv[])
     PageParser par;
     par.ParsePagesFromDisk(bfile);
     WebServer w;
-    w.setServerPort(8088);
+    w.setServerPort(5000);
     DynamicRepository r;
     for(BlogPage &page : par.pages) {
         r.add(page.get_fname(), &page);
