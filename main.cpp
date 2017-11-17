@@ -45,6 +45,8 @@ public:
 };
 struct PageParser {
     void filename_semantic(std::vector<char> sv){
+        if(!formatting)
+            return;
         std::string s(sv.begin(), sv.end());
         if(!page_status) {
             std::cout << "ERROR: Filename stated out of document! Exiting..." << std::endl;
@@ -63,6 +65,8 @@ struct PageParser {
     }
 
     void title_semantic(std::vector<char> sv){
+        if(!formatting)
+            return;
         std::string s(sv.begin(), sv.end());
         if(!page_status) {
             std::cout << "ERROR: Title stated out of document! Exiting..." << std::endl;
@@ -80,6 +84,8 @@ struct PageParser {
     }
 
     void document_semantic() {
+        if(!formatting)
+            return;
         if(!page_status) {
             page_status = true;
             return;
@@ -87,9 +93,6 @@ struct PageParser {
         if(filename.empty()) {
             filename = "/" + title + ".html";
             std::replace(filename.begin(), filename.end(), ' ', '_');
-        }
-        if(!formatting) {
-            page += "</pre>";
         }
         pages.push_back(BlogPage(title, page, filename));
         page = "";
@@ -183,7 +186,7 @@ int main(int argc, char *argv[])
     PageParser par;
     par.ParsePagesFromDisk(bfile);
     WebServer w;
-    w.setServerPort(8080);
+    w.setServerPort(5000);
     DynamicRepository r;
     for(BlogPage &page : par.pages) {
         r.add(page.get_fname(), &page);
